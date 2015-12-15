@@ -1,0 +1,204 @@
+import Foundation
+import UIKit
+import CoreBluetooth
+
+
+let btDiscoverySharedInstance = BTDiscovery();
+
+class BTDiscovery: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate{
+   var centralManager: CBCentralManager! 
+    var peripheral: CBPeripheral?
+    var Characteristics: CBCharacteristic!
+    
+    
+    
+    override init() {
+        
+        super.init()
+        
+        let centralQueue = dispatch_queue_create("com.jjj", DISPATCH_QUEUE_SERIAL)
+        centralManager = CBCentralManager(delegate: self, queue: centralQueue)
+         
+    }
+    
+    
+    
+    func startScanning() {
+        if let central = centralManager {
+            print("Scaning")
+            central.scanForPeripheralsWithServices(nil, options: nil)
+              if let service = self.bleService {
+            service.startDiscoveringServices()
+            print("On")
+                
+                func startDiscoveringServices() {
+                    self.peripheral?.discoverServices(nil)
+                    print("discovering Services")
+                    self.sendBTServiceNotificationWithIsBluetoothConnected(false)
+                }
+                
+                func reset() {
+                    
+                    self.sendBTServiceNotificationWithIsBluetoothConnected(true)
+                    
+                }
+                
+            }
+        }
+    }
+    func centralManager(central: CBCentralManager, var didDiscoverPeripheral peripheral: CBPeripheral, advertisementData: [String : AnyObject], RSSI: NSNumber) {
+        // Be sure to retain the peripheral or it will fail during connection.
+        
+        // Validate peripheral information
+        if ((peripheral == 0) || (peripheral.name == nil) || (peripheral.name == "")) {
+            return
+        }
+        
+        // If not already connected to a peripheral, then connect to this one
+        if ((self.peripheral == nil) || (self.peripheral?.state == CBPeripheralState.Disconnected)) {
+            // Retain the peripheral before trying to connect
+            self.peripheral = peripheral
+            
+            // Reset service
+            self.bleService = nil
+            
+            // Connect to peripheral
+            central.connectPeripheral(peripheral, options: nil)
+            print("connected to\(peripheral.name)")
+        }
+    }
+    
+    var bleService: BTService? {
+        didSet {
+            if let service = self.bleService {
+                service.startDiscoveringServices()
+                print("On")
+                
+                
+            }
+        }
+    }
+
+    func update(){
+        // Clear devices dictionary.
+        devices.removeAll(keepCapacity: false)
+        devicesRSSI.removeAll(keepCapacity: false)
+        // Initialize central manager on load
+        centralManager = CBCentralManager(delegate: self, queue: nil)
+        
+    }
+    
+    // MARK: - CBCentralManagerDelegate
+    
+    
+    
+    
+    func centralManager(central: CBCentralManager, didConnectPeripheral peripheral: CBPeripheral?) {
+        
+        
+        // Create new service class
+        if (peripheral == self.peripheral) {
+            self.bleService = BTService(initWithPeripheral: peripheral!)
+            print("Starting new class")
+            
+            func sendBTServiceNotificationWithIsBluetoothConnected(isBluetoothConnected: Bool) {
+                let connectionDetails = ["connecting": isBluetoothConnected]
+                NSNotificationCenter.defaultCenter().postNotificationName(BLEServiceChangedStatusNotification, object: self, userInfo: connectionDetails)
+                print("I should be changing the status")
+                
+            }
+        }
+        
+        
+    }
+ 
+    
+    // MARK: - Private
+    
+    func clearDevices() {
+        self.bleService = nil
+        self.peripheral = nil
+    }
+    
+    func centralManagerDidUpdateState(central: CBCentralManager) {
+        switch (central.state) {
+        case CBCentralManagerState.PoweredOff:
+            print("BLE OFF")
+            self.clearDevices()
+            
+        case CBCentralManagerState.Unauthorized:
+            // Indicate to user that the iOS device does not support BLE.
+            break
+            
+        case CBCentralManagerState.Unknown:
+            // Wait for another event
+            break
+            
+        case CBCentralManagerState.PoweredOn:
+            print("Ble ON")
+            self.startScanning()
+            
+        case CBCentralManagerState.Resetting:
+            self.clearDevices()
+            
+        case CBCentralManagerState.Unsupported:
+            break
+            
+        default:
+            break
+        }
+       
+        
+    }
+    
+    init(initWithPeripheral peripheral: CBPeripheral) {
+        super.init()
+
+        self.peripheral = peripheral
+        
+    }
+    
+    deinit {
+        self.reset()
+    }
+    
+    
+    func startDiscoveringServices() {
+        self.peripheral?.discoverServices([BLEServiceUUID])
+        print("discovering Services")
+        self.sendBTServiceNotificationWithIsBluetoothConnected(false)
+    }
+    
+    func reset() {
+        
+        self.sendBTServiceNotificationWithIsBluetoothConnected(true)
+        
+    }
+    
+    
+    // Mark: - CBPeripheralDelegate
+    
+    
+  
+   
+   
+    
+    // Mark: - Private
+    
+    
+    
+    func sendBTServiceNotificationWithIsBluetoothConnected(isBluetoothConnected: Bool) {
+        let connectionDetails = ["connecting": isBluetoothConnected]
+        NSNotificationCenter.defaultCenter().postNotificationName(BLEServiceChangedStatusNotification, object: self, userInfo: connectionDetails)
+        print("I should be changing the status")
+    }
+    
+    
+}
+
+
+
+
+
+
+
