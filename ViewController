@@ -1,0 +1,121 @@
+import UIKit
+import CoreBluetooth
+import Foundation
+
+
+
+
+
+class ViewController: UIViewController {
+    
+
+   
+    
+    
+    override func viewDidLoad() {
+            
+      
+        
+         func didReceiveMemoryWarning() {
+            super.didReceiveMemoryWarning()
+            // Dispose of any resources that can be recreated.
+        }
+       
+        
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        
+        btDiscoverySharedInstance
+        btServiceSharedInstance
+        
+        
+        // Watch Bluetooth connection
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: Selector("connectionChanged:"), name: BLEServiceChangedStatusNotification, object: nil)
+    }
+    
+        // Start the Bluetooth discovery process
+        
+        
+
+
+    
+    @IBOutlet weak var sendTextField: UITextField!
+    
+    
+   
+    
+    @IBAction func sendButton(sender: AnyObject) {
+        _ = sendTextField
+        writeValue(sendTextField.text!)
+        let seconds = 1.0
+        let delay = seconds * Double(NSEC_PER_SEC)  // nanoseconds per seconds
+        let dispatchTime = dispatch_time(DISPATCH_TIME_NOW, Int64(delay))
+        
+        dispatch_after(dispatchTime, dispatch_get_main_queue(), {
+            self.InfoLabel.text = ("Process Done")});
+        
+        self.InfoLabel.text = ("Waiting For Data")
+         self.ConnectionLabel.text = ("Connected to GardenEyes")
+    }
+
+    
+   
+    
+    deinit {
+        NSNotificationCenter.defaultCenter().removeObserver(self, name: BLEServiceChangedStatusNotification, object: nil)
+    }
+    
+    func writeValue(data: NSString){
+        let data = (data as NSString).dataUsingEncoding(NSUTF8StringEncoding)
+        if let peripheral = peripheral{
+            if let deviceCharacteristics = Characteristics{
+                peripheral.writeValue(data!, forCharacteristic: deviceCharacteristics, type: CBCharacteristicWriteType.WithoutResponse)
+            }
+        }
+        
+    }
+    
+    
+    
+    @IBOutlet var BTLabel: UILabel!
+    @IBOutlet var Changed: UIImageView!
+    @IBOutlet weak var InfoLabel: UILabel!
+    @IBOutlet var ConnectionLabel: UILabel!
+    
+    func connectionChanged(notification: NSNotification) {
+        
+        // Connection status changed. Indicate on GUI.
+        _ = notification.userInfo as! [String: Bool]
+        
+        dispatch_async(dispatch_get_main_queue(), {
+           
+            // Set image based on connection status
+            if let _: Bool = true{
+                    self.BTLabel.text = ("Connected")}
+            else{
+            if let _: Bool = false{self.BTLabel.text = ("disconnected")
+                }
+                
+            }
+            
+        });
+       
+    
+    }
+    
+  
+    
+    
+
+}
+
+
+
+
+
+
+
+
+
+
+
